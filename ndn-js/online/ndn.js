@@ -14695,7 +14695,6 @@ var Pipeline = require('./pipeline.js').Pipeline; /** @ignore */
 var PipelineCubic = function PipelineCubic
   (baseInterest, face, opts, validatorKeyChain, onComplete, onError, stats)
 {
-  console.log(Log.LOG)
   this.pipeline = new Pipeline(baseInterest);
   this.face = face;
   this.validatorKeyChain = validatorKeyChain;
