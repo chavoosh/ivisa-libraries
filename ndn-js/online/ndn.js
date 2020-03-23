@@ -14329,6 +14329,7 @@ var PipelineFixed = function PipelineFixed
   this.onComplete = onComplete;
   this.onError = onError;
   this.pipeline = new Pipeline(baseInterest);
+  this.contentName = baseInterest.getName().toUri();
 
   this.nInFlight = 0;
 
@@ -14355,6 +14356,7 @@ exports.PipelineFixed = PipelineFixed;
 PipelineFixed.prototype.run = function()
 {
   this.stats.pipelineStartTime = Date.now();
+  console.log("start fetching: " + this.contentName)
 
   var interest = this.pipeline.makeInterest(0);
   if (Number.isNaN(this.pipeline.versionNo) ) {
@@ -14701,6 +14703,7 @@ var PipelineCubic = function PipelineCubic
   this.validatorKeyChain = validatorKeyChain;
   this.onComplete = onComplete;
   this.onError = onError;
+  this.contentName = baseInterest.getName().toUri();
 
   // Adaptive options
   this.initCwnd = Pipeline.op("initCwnd", 1.0, opts);
@@ -14809,6 +14812,7 @@ PipelineCubic.prototype.decreaseWindow = function()
 PipelineCubic.prototype.run = function()
 {
   this.stats.pipelineStartTime = Date.now();
+  console.log("start fetching: " + this.contentName)
 
   // Schedule the next check after the predefined interval
   setTimeout(this.checkRto.bind(this), this.rtoCheckInterval);
@@ -15274,6 +15278,7 @@ PipelineCubic.prototype.printSummary = function()
   }
 
   console.log("Timeouts: " + this.nTimeouts + " (caused " + this.nLossDecr + " window decreases)\n" +
+              "Timeouts: " + this.nTimeouts + " (caused " + this.nLossDecr + " window decreases)\n" +
               "Nacks: " + this.nNacks + "\n" +
               "Retransmitted segments: " + this.nRetransmitted +
               " (" + (this.nSent == 0 ? 0 : (this.nRetransmitted / this.nSent * 100))  + "%)" +
