@@ -14356,7 +14356,8 @@ exports.PipelineFixed = PipelineFixed;
 PipelineFixed.prototype.run = function()
 {
   this.stats.pipelineStartTime = Date.now();
-  console.log("start fetching: " + this.contentName)
+  if (Log.LOG > 0)
+    console.log("start fetching: " + this.contentName)
 
   var interest = this.pipeline.makeInterest(0);
   if (Number.isNaN(this.pipeline.versionNo) ) {
@@ -14812,7 +14813,8 @@ PipelineCubic.prototype.decreaseWindow = function()
 PipelineCubic.prototype.run = function()
 {
   this.stats.pipelineStartTime = Date.now();
-  console.log("start fetching: " + this.contentName)
+  if (Log.LOG > 0)
+    console.log("start fetching: " + this.contentName)
 
   // Schedule the next check after the predefined interval
   setTimeout(this.checkRto.bind(this), this.rtoCheckInterval);
