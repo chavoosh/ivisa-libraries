@@ -14523,7 +14523,7 @@ PipelineFixed.prototype.onData = function(data)
   var rtt = Date.now() - recSeg.timeSent;
   var fullDelay = Date.now() - recSeg.initTimeSent;
 
-  if (Log.LOG > 1) {
+  if (Log.LOG > 4) {
     console.log ("Received segment #" + recSegmentNo
                  + ", rtt=" + rtt + "ms");
   }
@@ -14621,7 +14621,7 @@ PipelineFixed.prototype.onValidationFailed = function(data, reason)
 
 PipelineFixed.prototype.printSummary = function()
 {
-  if (Log.LOG < 2)
+  if (Log.LOG < 3)
     return;
 
   var rttMsg = "";
@@ -14743,6 +14743,9 @@ var PipelineCubic = function PipelineCubic
 
   // Stats collector
   this.stats = stats != null ? stats : {};
+
+  // Logging
+  this.disableLogging = Pipeline.op("disableLogging", false, opts); // e.g., for stats Interests we do not logging
 }
 
 exports.PipelineCubic = PipelineCubic;
@@ -14813,7 +14816,7 @@ PipelineCubic.prototype.decreaseWindow = function()
 PipelineCubic.prototype.run = function()
 {
   this.stats.pipelineStartTime = Date.now();
-  if (Log.LOG > 0)
+  if (Log.LOG > 0 && !this.disableLogging)
     console.log("start fetching: " + this.contentName)
 
   // Schedule the next check after the predefined interval
@@ -14856,12 +14859,12 @@ PipelineCubic.prototype.sendInterest = function(segNo, isRetransmission)
              this.maxRetriesOnTimeoutOrNack + ") while retrieving segment #" + segNo);
       }
     }
-    if (Log.LOG > 1)
+    if (Log.LOG > 3 && !this.disableLogging)
       console.log("Retransmitting segment #" + segNo + " (" + this.retxCount[segNo] + ")" +
                   " rto: " + this.rttEstimator.getEstimatedRto());
   }
 
-  if (Log.LOG > 1 && !isRetransmission)
+  if (Log.LOG > 4 && !this.disableLogging && !isRetransmission)
     console.log("Requesting segment #" + segNo + " rto: " + this.rttEstimator.getEstimatedRto());
 
   var interest = this.pipeline.makeInterest(segNo);
@@ -14904,7 +14907,8 @@ PipelineCubic.prototype.sendInterest = function(segNo, isRetransmission)
 PipelineCubic.prototype.schedulePackets = function()
 {
   if (this.nInFlight < 0) {
-    this.handleFailure(-1, Pipeline.ErrorCode.MISC, "Number of in flight Interests is negative.");
+    this.handleFailure(-1, Pipeline.ErrorCode.MISC,
+                       "Number of in flight Interests is negative (" + nInFlight + ").");
     return;
   }
 
@@ -15018,7 +15022,7 @@ PipelineCubic.prototype.onData = function(data)
   if (recSeg.initTimeSent !== undefined)
     fullDelay = Date.now() - recSeg.initTimeSent;
 
-  if (Log.LOG > 1) {
+  if (Log.LOG > 4 && !this.disableLogging) {
     console.log ("Received segment #" + recSegmentNo
                  + ", rtt=" + rtt + "ms"
                  + ", rto=" + recSeg.rto + "ms");
@@ -15068,6 +15072,7 @@ PipelineCubic.prototype.onData = function(data)
     this.stats.avgJitter      = this.rttEstimator.getAvgJitter().toPrecision(3);
     this.stats.nSegments      = this.pipeline.numberOfSatisfiedSegments;
     this.stats.completionTime = Date.now() - this.stats.pipelineStartTime;
+    this.stats.congWindowSize = this.cwnd;
     try {
       this.cancel();
       this.printSummary();
@@ -15121,7 +15126,8 @@ PipelineCubic.prototype.checkRto = function()
 PipelineCubic.prototype.enqueueForRetransmission = function(segNo)
 {
   if (this.nInFlight <= 0) {
-    this.handleFailure(-1, Pipeline.ErrorCode.MISC, "Number of in flight Interests <= 0.");
+    this.handleFailure(-1, Pipeline.ErrorCode.MISC,
+                       "Number of in flight Interests (" + nInFlight + ") <= 0 .");
     return;
   }
 
@@ -15140,7 +15146,7 @@ PipelineCubic.prototype.recordTimeout = function()
     this.rttEstimator.backoffRto();
     this.nLossDecr++;
 
-    if (Log.LOG > 1) {
+    if (Log.LOG > 2 && !this.disableLogging) {
       console.log("Packet loss event, new cwnd = " + this.cwnd
                   + ", ssthresh = " + this.ssthresh);
     }
@@ -15258,14 +15264,14 @@ PipelineCubic.prototype.onValidationFailed = function(data, reason)
 
 PipelineCubic.prototype.onWarning = function(errCode, reason)
 {
-  if (Log.LOG > 2) {
+  if (Log.LOG > 2 && !this.disableLogging) {
     Pipeline.reportWarning(errCode, reason);
   }
 };
 
 PipelineCubic.prototype.printSummary = function()
 {
-  if (Log.LOG < 2)
+  if (Log.LOG < 3 && !this.disableLogging)
     return;
 
   var rttMsg = "";
@@ -15279,12 +15285,13 @@ PipelineCubic.prototype.printSummary = function()
                                + this.rttEstimator.getMaxRtt().toPrecision(3) + " ms";
   }
 
-  console.log("Timeouts: " + this.nTimeouts + " (caused " + this.nLossDecr + " window decreases)\n" +
-              "Timeouts: " + this.nTimeouts + " (caused " + this.nLossDecr + " window decreases)\n" +
+  console.log("initial Cwnd: " + this.initCwnd + "\nCurrent Cwnd: " + this.cwnd +
+              "\nTimeouts: " + this.nTimeouts + " (caused " + this.nLossDecr + " window decreases)\n" +
               "Nacks: " + this.nNacks + "\n" +
               "Retransmitted segments: " + this.nRetransmitted +
               " (" + (this.nSent == 0 ? 0 : (this.nRetransmitted / this.nSent * 100))  + "%)" +
               ", skipped: " + this.nSkippedRetx + "\n" +
+              "Total number of received segments: " + this.pipeline.numberOfSatisfiedSegments + "\n" +
               "RTT " + rttMsg + "\n" +
               "Average jitter: " + this.rttEstimator.getAvgJitter().toPrecision(3) + " ms\n" +
               "Completion time: " + this.stats.completionTime + "ms");
