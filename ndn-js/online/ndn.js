@@ -14908,7 +14908,7 @@ PipelineCubic.prototype.schedulePackets = function()
 {
   if (this.nInFlight < 0) {
     this.handleFailure(-1, Pipeline.ErrorCode.MISC,
-                       "Number of in flight Interests is negative (" + nInFlight + ").");
+                       "Number of in flight Interests is negative (" + this.nInFlight + ").");
     return;
   }
 
